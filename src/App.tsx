@@ -1,22 +1,28 @@
 import { useState, useRef, useCallback } from "react";
 
+interface Result {
+  text: string;
+  status: "normal" | "attention" | "urgent";
+  seeDoctor: boolean;
+}
+
 export default function LabLens() {
-  const [image, setImage] = useState(null);
-  const [imageBase64, setImageBase64] = useState(null);
+  const [image, setImage] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState(null);
+  const [result, setResult] = useState<Result | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [drag, setDrag] = useState(false);
-  const fileRef = useRef();
+  const fileRef = useRef<HTMLInputElement>(null);
   const step = result ? 3 : image ? 2 : 1;
 
-  const handleFile = useCallback((file) => {
+  const handleFile = useCallback((file: File) => {
     if (!file || !file.type.startsWith("image/")) return;
     setImage(URL.createObjectURL(file));
     setResult(null);
     setError(null);
     const reader = new FileReader();
-    reader.onload = (e) => setImageBase64(e.target.result.split(",")[1]);
+    reader.onload = (e) => setImageBase64((e.target?.result as string).split(",")[1]);
     reader.readAsDataURL(file);
   }, []);
 
@@ -48,10 +54,10 @@ export default function LabLens() {
       });
       const data = await response.json();
       if (data.error) throw new Error(data.error.message);
-      const text = data.content?.[0]?.text || "";
+      const text: string = data.content?.[0]?.text || "";
       const lower = text.toLowerCase();
       const seeDoctor = lower.includes("see a doctor") || lower.includes("consult") || lower.includes("urgent");
-      let status = "normal";
+      let status: "normal" | "attention" | "urgent" = "normal";
       if (lower.includes("urgent") || lower.includes("see a doctor")) status = "urgent";
       else if (lower.includes("slightly") || lower.includes("monitor")) status = "attention";
       setResult({ text, status, seeDoctor });
@@ -66,7 +72,6 @@ export default function LabLens() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0A1628", color: "#fff", fontFamily: "sans-serif" }}>
-      {/* Header */}
       <div style={{ padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{ fontSize: 22 }}>🔬</span>
         <span style={{ fontSize: 22, fontWeight: 800 }}>Lab<span style={{ color: "#F59E0B" }}>Lens</span></span>
@@ -74,13 +79,11 @@ export default function LabLens() {
       </div>
 
       <div style={{ maxWidth: 680, margin: "0 auto", padding: "40px 20px" }}>
-        {/* Hero */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <h1 style={{ fontSize: 36, fontWeight: 800, marginBottom: 10 }}>Your Lab Results,<br /><span style={{ color: "#F59E0B" }}>Explained Simply.</span></h1>
           <p style={{ color: "rgba(219,234,254,0.7)", fontSize: 15 }}>Snap a photo of your lab result. Our AI reads it and tells you exactly what it means — in plain English.</p>
         </div>
 
-        {/* Steps */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0, marginBottom: 32 }}>
           {["Upload", "Analyze", "Understand"].map((s, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center" }}>
@@ -95,16 +98,15 @@ export default function LabLens() {
           ))}
         </div>
 
-        {/* Upload zone */}
         {!image && !loading && !result && (
           <div
             onClick={() => fileRef.current?.click()}
             onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
             onDragLeave={() => setDrag(false)}
-            onDrop={(e) => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]); }}
+            onDrop={(e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if(f) handleFile(f); }}
             style={{ border: `2px dashed ${drag ? "#1B4FD8" : "rgba(27,79,216,0.4)"}`, borderRadius: 20, padding: "48px 24px", textAlign: "center", cursor: "pointer", background: drag ? "rgba(27,79,216,0.1)" : "rgba(13,31,60,0.6)" }}
           >
-            <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => handleFile(e.target.files[0])} />
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { if(e.target.files?.[0]) handleFile(e.target.files[0]); }} />
             <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
             <h3 style={{ marginBottom: 6 }}>Drop your lab result here</h3>
             <p style={{ color: "#64748B", fontSize: 13, marginBottom: 20 }}>Supports JPG, PNG — any photo from your phone</p>
@@ -112,7 +114,6 @@ export default function LabLens() {
           </div>
         )}
 
-        {/* Preview */}
         {image && !loading && !result && (
           <div style={{ borderRadius: 20, overflow: "hidden", background: "#0D1F3C", border: "1px solid rgba(255,255,255,0.08)" }}>
             <img src={image} alt="Lab result" style={{ width: "100%", maxHeight: 320, objectFit: "contain", display: "block", padding: 16 }} />
@@ -123,7 +124,6 @@ export default function LabLens() {
           </div>
         )}
 
-        {/* Loading */}
         {loading && (
           <div style={{ textAlign: "center", padding: 48, background: "#0D1F3C", borderRadius: 20, border: "1px solid rgba(27,79,216,0.3)" }}>
             <div style={{ width: 48, height: 48, border: "3px solid rgba(27,79,216,0.2)", borderTopColor: "#1B4FD8", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 20px" }} />
@@ -133,7 +133,6 @@ export default function LabLens() {
           </div>
         )}
 
-        {/* Error */}
         {error && (
           <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 14, padding: "20px 24px", textAlign: "center", marginBottom: 16 }}>
             <p style={{ color: "#EF4444" }}>⚠️ {error}</p>
@@ -141,7 +140,6 @@ export default function LabLens() {
           </div>
         )}
 
-        {/* Result */}
         {result && !loading && (
           <div style={{ background: "#0D1F3C", borderRadius: 20, overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)" }}>
             <div style={{ padding: "18px 24px", display: "flex", alignItems: "center", gap: 12, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
